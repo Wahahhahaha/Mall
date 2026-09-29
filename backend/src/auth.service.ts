@@ -222,15 +222,16 @@ export class AuthService {
   private buildAuthResponse(user: {
     userid: number;
     email: string;
-    levelid: number;
+    levelid: number | null;
     phone: string | null;
-    level: { levelname: string };
+    level: { levelname: string } | null;
   }) {
+    const levelname = user.level?.levelname ?? '';
     const payload = {
       userid: user.userid,
       email: user.email,
       levelid: user.levelid,
-      levelname: user.level.levelname,
+      levelname,
     };
 
     return {
@@ -238,7 +239,7 @@ export class AuthService {
       user: {
         userid: user.userid,
         email: user.email,
-        level: user.level.levelname,
+        level: levelname,
         levelid: user.levelid,
         phone: user.phone,
       },

@@ -193,7 +193,8 @@ export class ReportService {
       const fee = Math.round((tenant.location?.pricePerYear ?? 0) / 12);
       if (!fee) continue;
 
-      const activeFrom = tenant.createdAt > from ? tenant.createdAt : from;
+      const createdAt = tenant.createdAt ?? from;
+      const activeFrom = createdAt > from ? createdAt : from;
       const leaseEnd = tenant.leaseUntil ? endOfDay(tenant.leaseUntil) : to;
       const activeTo = leaseEnd < to ? leaseEnd : to;
       if (activeFrom > activeTo) continue;

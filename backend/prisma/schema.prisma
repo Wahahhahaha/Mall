@@ -8,70 +8,70 @@ datasource db {
 }
 
 model User {
-  userid    Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  levelid   Int
-  phone     String?
-  level     Level    @relation(fields: [levelid], references: [levelid])
+  userid       Int             @id @default(autoincrement())
+  email        String          @unique
+  password     String
+  levelid      Int?
+  phone        String?
+  level        Level?          @relation(fields: [levelid], references: [levelid])
   requests     TenantRequest[]
   activityLogs ActivityLog[]
-  isDeleted  Boolean  @default(false) @map("is_deleted")
-  createdAt    DateTime @default(now())
+  isDeleted    Boolean         @default(false) @map("is_deleted")
+  createdAt    DateTime?       @default(now())
 
   @@index([isDeleted])
   @@map("users")
 }
 
 model Level {
-  levelid     Int              @id @default(autoincrement())
-  levelname   String           @unique
+  levelid     Int               @id @default(autoincrement())
+  levelname   String            @unique
   users       User[]
   permissions LevelPermission[]
-  isDeleted   Boolean          @default(false) @map("is_deleted")
+  isDeleted   Boolean           @default(false) @map("is_deleted")
 
   @@index([isDeleted])
   @@map("level")
 }
 
 model LevelPermission {
-  id      Int    @id @default(autoincrement())
+  id      Int     @id @default(autoincrement())
   levelid Int
   page    String
   action  String
   granted Boolean @default(false)
-  level   Level  @relation(fields: [levelid], references: [levelid], onDelete: Cascade)
+  level   Level   @relation(fields: [levelid], references: [levelid], onDelete: Cascade)
 
   @@unique([levelid, page, action])
   @@map("levelpermission")
 }
 
 model Floor {
-  floorid   Int      @id @default(autoincrement())
-  floorname String   @unique
-  floorcode String?  @unique
+  floorid   Int        @id @default(autoincrement())
+  floorname String     @unique
+  floorcode String?    @unique
   sortOrder Int        @default(0)
-  createdAt DateTime   @default(now())
+  createdAt DateTime?  @default(now())
   locations Location[]
   events    Event[]
-  isDeleted  Boolean @default(false) @map("is_deleted")
+  isDeleted Boolean    @default(false) @map("is_deleted")
 
   @@index([isDeleted])
   @@map("floors")
 }
 
 model Event {
-  eventid     Int      @id @default(autoincrement())
+  eventid     Int       @id @default(autoincrement())
   name        String
-  description String?  @db.Text
+  description String?   @db.Text
   floorid     Int?
-  floor       Floor?   @relation(fields: [floorid], references: [floorid], onDelete: SetNull)
+  floor       Floor?    @relation(fields: [floorid], references: [floorid], onDelete: SetNull)
   location    String
-  startDate   DateTime
-  endDate     DateTime
-  posters     String[] @default([])
-  isDeleted   Boolean  @default(false) @map("is_deleted")
-  createdAt   DateTime @default(now())
+  startDate   DateTime?
+  endDate     DateTime?
+  posters     String[]  @default([])
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  createdAt   DateTime? @default(now())
 
   @@index([floorid])
   @@index([isDeleted])
@@ -79,16 +79,16 @@ model Event {
 }
 
 model Tenant {
-  tenantid   Int      @id @default(autoincrement())
+  tenantid   Int             @id @default(autoincrement())
   name       String
-  category   String
+  category   String?
   logoUrl    String?
   leaseUntil DateTime?
-  locationid Int?     @unique
-  location   Location? @relation(fields: [locationid], references: [id], onDelete: SetNull)
+  locationid Int?            @unique
+  location   Location?       @relation(fields: [locationid], references: [id], onDelete: SetNull)
   payments   TenantPayment[]
-  isDeleted  Boolean  @default(false) @map("is_deleted")
-  createdAt  DateTime @default(now())
+  isDeleted  Boolean         @default(false) @map("is_deleted")
+  createdAt  DateTime?       @default(now())
 
   @@index([isDeleted])
   @@map("tenants")
@@ -98,45 +98,45 @@ model ParkingTicket {
   ticketid  Int       @id @default(autoincrement())
   plate     String
   type      String
-  entryAt   DateTime  @map("entry_at") @default(now())
+  entryAt   DateTime? @default(now()) @map("entry_at")
   exitAt    DateTime? @map("exit_at")
   fee       Int?
   entryBy   Int?
   exitBy    Int?
-  createdAt DateTime  @default(now())
+  createdAt DateTime? @default(now())
 
   @@index([plate, exitAt])
   @@map("parking_tickets")
 }
 
 model Setting {
-  id             Int      @id @default(1)
-  systemName     String   @default("SIM MALL")
-  systemLogo     String?
-  systemFavicon  String?
-  systemContact  String?
-  systemAddress  String?
-  logoMode       Boolean  @default(false)
-  updatedAt      DateTime @updatedAt
+  id            Int       @id @default(1)
+  systemName    String    @default("SIM MALL")
+  systemLogo    String?
+  systemFavicon String?
+  systemContact String?
+  systemAddress String?
+  logoMode      Boolean   @default(false)
+  updatedAt     DateTime? @updatedAt
 
   @@map("settings")
 }
 
 model Location {
-  id            Int      @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   name          String
   floorid       Int?
-  floor         Floor?   @relation(fields: [floorid], references: [floorid], onDelete: SetNull)
+  floor         Floor?          @relation(fields: [floorid], references: [floorid], onDelete: SetNull)
   x             Float
   y             Float
-  pricePerYear  Int?     @default(50000000)
-  minLeaseYears Int      @default(1)
+  pricePerYear  Int?            @default(50000000)
+  minLeaseYears Int             @default(1)
   tenants       Tenant[]
   requests      TenantRequest[]
   payments      TenantPayment[]
-  isDeleted     Boolean  @default(false) @map("is_deleted")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isDeleted     Boolean         @default(false) @map("is_deleted")
+  createdAt     DateTime?       @default(now())
+  updatedAt     DateTime?       @updatedAt
 
   @@index([floorid])
   @@index([isDeleted])
@@ -153,14 +153,14 @@ model TenantRequest {
   totalFee         Int
   paymentMethod    String?
   businessName     String
-  businessCategory String
+  businessCategory String?
   description      String?   @db.Text
   phone            String?
-  status           String    @default("Pending")
+  status           String?   @default("Pending")
   contractStart    DateTime?
   isDeleted        Boolean   @default(false) @map("is_deleted")
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime? @default(now())
+  updatedAt        DateTime? @updatedAt
 
   @@index([userid])
   @@index([locationid])

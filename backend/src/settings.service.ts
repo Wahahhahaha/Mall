@@ -8,7 +8,7 @@ export interface SystemSettings {
   systemContact: string | null;
   systemAddress: string | null;
   logoMode: boolean;
-  updatedAt: Date;
+  updatedAt: Date | null;
 }
 
 export type SystemSettingsInput = Partial<

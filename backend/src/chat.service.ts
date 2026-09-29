@@ -183,12 +183,14 @@ function utcDate(value: Date): Date {
   );
 }
 
-function fmtDate(value: Date): string {
+function fmtDate(value: Date | null): string {
+  if (!value) return 'unknown date';
   const d = utcDate(value);
   return `${d.getUTCDate()} ${MONTHS_EN[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-function fmtTime(value: Date): string {
+function fmtTime(value: Date | null): string {
+  if (!value) return '';
   const iso = value.toISOString();
   const t = iso.slice(11, 16);
   return t === '00:00' ? '' : t;
@@ -373,7 +375,11 @@ export class ChatService {
       // "running today" flag never drifts by a day because of the server offset.
       const today = utcDate(new Date());
       const running = rows.filter(
-        (e) => utcDate(e.startDate) <= today && utcDate(e.endDate) >= today,
+        (e) =>
+          e.startDate !== null &&
+          e.endDate !== null &&
+          utcDate(e.startDate) <= today &&
+          utcDate(e.endDate) >= today,
       );
 
       const head = `DATABASE SNAPSHOT — events overlapping ${window.label}:`;
@@ -455,7 +461,7 @@ export class ChatService {
             return f.includes(floorName.toLowerCase());
           }
           if (category)
-            return t2.category.toLowerCase().includes(category.toLowerCase());
+            return (t2.category ?? '').toLowerCase().includes(category.toLowerCase());
           return true;
         })
         .map((t2) => {
