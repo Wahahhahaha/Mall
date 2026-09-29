@@ -1,7 +1,5 @@
 import {
-  Store,
   UtensilsCrossed,
-  Film,
   Baby,
   Moon,
   Wifi,
@@ -117,11 +115,9 @@ export const facilities: FacilityItem[] = [
   { icon: Droplets, name: 'Prayer Rooms', desc: 'Clean and comfortable musala for visitors, separate for men and women.', location: 'Every floor' },
   { icon: Baby, name: 'Nursing Room', desc: 'Private nursing and diaper-changing facilities for families.', location: 'Floor 1 & Floor 3' },
   { icon: UtensilsCrossed, name: 'Food Terrace', desc: 'Dozens of F&B tenants, from local favorites to international brands.', location: 'Ground Floor & Floor 2' },
-  { icon: Film, name: 'Cinema XXI', desc: 'Latest movies with premium picture and Dolby Atmos sound.', location: 'Floor 2' },
   { icon: Moon, name: 'Kids Playground', desc: 'Safe play area to keep your little ones entertained.', location: 'Floor 3' },
   { icon: CreditCard, name: 'ATM Center', desc: 'Bank ATMs and cash payment points in one convenient zone.', location: 'Ground Floor' },
   { icon: ArrowUpDown, name: 'Escalator & Lift', desc: 'Easy access to every floor, including wheelchair-friendly lifts.', location: 'All floors' },
-  { icon: Store, name: 'Tenant Lounge', desc: 'Dedicated rest area and service desk for mall partners.', location: 'Service Area' },
 ];
 
 export interface FloorInfo {

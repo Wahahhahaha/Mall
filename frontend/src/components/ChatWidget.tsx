@@ -12,7 +12,7 @@ interface ChatMsg {
 const WELCOME: ChatMsg = {
   role: 'assistant',
   content:
-    'Halo! Saya asisten virtual SIM Mall. Ada yang bisa saya bantu seputar tenant, fasilitas, parkir, jam buka, atau acara di mall ini?',
+    'Halo! Saya Cher, asisten virtual SIM Mall. Ada yang bisa saya bantu seputar tenant, fasilitas, parkir, jam buka, atau acara di mall ini?',
 };
 
 function cleanAiText(raw: string): string {
@@ -86,7 +86,7 @@ function ChatWidget() {
           <div className="chat-header">
             <div className="chat-header-title">
               <div>
-                <strong>Mall AI Assistant</strong>
+                <strong>Cher</strong>
               </div>
             </div>
             <button

@@ -16,14 +16,18 @@ import {
 import { floors, facilities, marqueeItems, events, faqs } from './mallData';
 import heroImg from '../../assets/mall-hero.jpg';
 
-const HERO_STATS = [
-  { value: 148, suffix: '+', label: 'Retail Tenants' },
-  { value: 1500, label: 'Parking Spaces' },
-  { value: 6, label: 'Shopping Floors' },
-  { value: '24/7', label: 'System Uptime' },
-];
+const DEFAULT_FLOOR_COUNT = floors.length;
 
-function HeroSection({ appName }: { appName: string }) {
+function heroStats(floorCount: number) {
+  return [
+    { value: 148, suffix: '+', label: 'Retail Tenants' },
+    { value: 1500, label: 'Parking Spaces' },
+    { value: floorCount, label: 'Shopping Floors' },
+    { value: '24/7', label: 'System Uptime' },
+  ];
+}
+
+function HeroSection({ appName, floorCount }: { appName: string; floorCount: number }) {
   return (
     <section className="home-hero">
       <div className="hero-media">
@@ -55,7 +59,7 @@ function HeroSection({ appName }: { appName: string }) {
           </Link>
         </div>
 
-        <StatsRow items={HERO_STATS} variant="hero" />
+        <StatsRow items={heroStats(floorCount)} variant="hero" />
       </div>
     </section>
   );
@@ -118,6 +122,7 @@ function TickerStrip() {
 export default function Home() {
   const brand = useSyncExternalStore(subscribeAppSettings, getAppSettings);
   const [liftFloors, setLiftFloors] = useState<FloorInfo[]>(floors);
+  const [floorCount, setFloorCount] = useState(DEFAULT_FLOOR_COUNT);
 
   useEffect(() => {
     let ignore = false;
@@ -140,6 +145,8 @@ export default function Home() {
             location?: { floorid: number | null } | null;
           }>;
           if (!floorRows.length) return;
+
+          setFloorCount(floorRows.length);
 
           // Floors come pre-sorted by the API (sortOrder from DB), so no
           // localStorage re-sort is needed — the order set on /dashboard/floor-data
@@ -186,12 +193,12 @@ export default function Home() {
 
   return (
     <>
-      <HeroSection appName={brand.appName} />
+      <HeroSection appName={brand.appName} floorCount={floorCount} />
 
       <div id="tour">
         <TickerStrip />
         <Reveal stagger>
-          <StatsRow items={HERO_STATS} variant="landing" />
+          <StatsRow items={heroStats(floorCount)} variant="landing" />
         </Reveal>
       </div>
 
