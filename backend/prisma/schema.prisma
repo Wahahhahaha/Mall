@@ -3,14 +3,208 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
+  userid    Int      @id @default(autoincrement())
   email     String   @unique
   password  String
-  createdAt DateTime @default(now())
+  levelid   Int
+  phone     String?
+  level     Level    @relation(fields: [levelid], references: [levelid])
+  requests     TenantRequest[]
+  activityLogs ActivityLog[]
+  isDeleted  Boolean  @default(false) @map("is_deleted")
+  createdAt    DateTime @default(now())
+
+  @@index([isDeleted])
+  @@map("users")
+}
+
+model Level {
+  levelid     Int              @id @default(autoincrement())
+  levelname   String           @unique
+  users       User[]
+  permissions LevelPermission[]
+  isDeleted   Boolean          @default(false) @map("is_deleted")
+
+  @@index([isDeleted])
+  @@map("level")
+}
+
+model LevelPermission {
+  id      Int    @id @default(autoincrement())
+  levelid Int
+  page    String
+  action  String
+  granted Boolean @default(false)
+  level   Level  @relation(fields: [levelid], references: [levelid], onDelete: Cascade)
+
+  @@unique([levelid, page, action])
+  @@map("levelpermission")
+}
+
+model Floor {
+  floorid   Int      @id @default(autoincrement())
+  floorname String   @unique
+  floorcode String?  @unique
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  locations Location[]
+  events    Event[]
+  isDeleted  Boolean @default(false) @map("is_deleted")
+
+  @@index([isDeleted])
+  @@map("floors")
+}
+
+model Event {
+  eventid     Int      @id @default(autoincrement())
+  name        String
+  description String?  @db.Text
+  floorid     Int?
+  floor       Floor?   @relation(fields: [floorid], references: [floorid], onDelete: SetNull)
+  location    String
+  startDate   DateTime
+  endDate     DateTime
+  posters     String[] @default([])
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now())
+
+  @@index([floorid])
+  @@index([isDeleted])
+  @@map("events")
+}
+
+model Tenant {
+  tenantid   Int      @id @default(autoincrement())
+  name       String
+  category   String
+  logoUrl    String?
+  leaseUntil DateTime?
+  locationid Int?     @unique
+  location   Location? @relation(fields: [locationid], references: [id], onDelete: SetNull)
+  payments   TenantPayment[]
+  isDeleted  Boolean  @default(false) @map("is_deleted")
+  createdAt  DateTime @default(now())
+
+  @@index([isDeleted])
+  @@map("tenants")
+}
+
+model ParkingTicket {
+  ticketid  Int       @id @default(autoincrement())
+  plate     String
+  type      String
+  entryAt   DateTime  @map("entry_at") @default(now())
+  exitAt    DateTime? @map("exit_at")
+  fee       Int?
+  entryBy   Int?
+  exitBy    Int?
+  createdAt DateTime  @default(now())
+
+  @@index([plate, exitAt])
+  @@map("parking_tickets")
+}
+
+model Setting {
+  id             Int      @id @default(1)
+  systemName     String   @default("SIM MALL")
+  systemLogo     String?
+  systemFavicon  String?
+  systemContact  String?
+  systemAddress  String?
+  logoMode       Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model Location {
+  id            Int      @id @default(autoincrement())
+  name          String
+  floorid       Int?
+  floor         Floor?   @relation(fields: [floorid], references: [floorid], onDelete: SetNull)
+  x             Float
+  y             Float
+  pricePerYear  Int?     @default(50000000)
+  minLeaseYears Int      @default(1)
+  tenants       Tenant[]
+  requests      TenantRequest[]
+  payments      TenantPayment[]
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([floorid])
+  @@index([isDeleted])
+  @@map("locations")
+}
+
+model TenantRequest {
+  id               Int       @id @default(autoincrement())
+  userid           Int
+  user             User      @relation(fields: [userid], references: [userid], onDelete: Cascade)
+  locationid       Int
+  location         Location  @relation(fields: [locationid], references: [id], onDelete: Cascade)
+  durationMonths   Int
+  totalFee         Int
+  paymentMethod    String?
+  businessName     String
+  businessCategory String
+  description      String?   @db.Text
+  phone            String?
+  status           String    @default("Pending")
+  contractStart    DateTime?
+  isDeleted        Boolean   @default(false) @map("is_deleted")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userid])
+  @@index([locationid])
+  @@index([status])
+  @@index([isDeleted])
+  @@map("tenant_requests")
+}
+
+model TenantPayment {
+  paymentid  Int       @id @default(autoincrement())
+  tenantid   Int
+  tenant     Tenant    @relation(fields: [tenantid], references: [tenantid], onDelete: Cascade)
+  locationid Int?
+  location   Location? @relation(fields: [locationid], references: [id], onDelete: SetNull)
+  period     String
+  amount     Int
+  status     String    @default("Unpaid")
+  method     String?
+  paidAt     DateTime?
+  notes      String?
+  orderId    String?
+  payUrl     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([tenantid, period])
+  @@index([orderId])
+  @@index([period])
+  @@index([status])
+  @@map("tenant_payments")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  datetime  DateTime @default(now())
+  ip        String?
+  latitude  Float?
+  longitude Float?
+  userid    Int?
+  email     String?
+  action    String
+  user      User?    @relation(fields: [userid], references: [userid], onDelete: SetNull)
+
+  @@index([userid])
+  @@index([email])
+  @@map("activity_logs")
 }
