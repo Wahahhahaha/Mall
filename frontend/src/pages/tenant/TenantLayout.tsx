@@ -161,7 +161,7 @@ export default function TenantLayout() {
       </main>
 
       <footer className="tenant-footer">
-        <span>SIM Mall Tenant Portal © 2026 — Only vacant units are listed. Submit your lease and payment requests online.</span>
+        <span>© {brand.appName || 'SIM MALL'} {new Date().getFullYear()}</span>
       </footer>
     </div>
   );

@@ -67,6 +67,7 @@ function TenantDataView() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [popover, setPopover] = useState<MapPopover | null>(null);
+  const [mapPage, setMapPage] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
   const mapWrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1); const [tx, setTx] = useState(0); const [ty, setTy] = useState(0);
@@ -81,7 +82,7 @@ function TenantDataView() {
       axios.get<FloorOption[]>(`${BACKEND_URL}/floors`),
       axios.get<LocationRef[]>(`${BACKEND_URL}/locations`),
     ])
-      .then(([t, f, l]) => { if (!ignore) { setTenants(t.data); setFloors(f.data); setLocations(l.data); setLoading(false); if (!mapFloor && f.data[0]) setMapFloor(f.data[0].floorname); } })
+      .then(([t, f, l]) => { if (!ignore) { setTenants(t.data); setFloors(f.data); setLocations(l.data); setLoading(false); if (!mapFloor) { const gf = f.data.find(x => x.floorname === 'Ground Floor') ?? f.data[0]; if (gf) setMapFloor(gf.floorname); } } })
       .catch(() => { if (!ignore) { setLoading(false); } });
     return () => { ignore = true; };
   }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -110,16 +111,17 @@ function TenantDataView() {
     const matchCategory = !categoryFilter || t.category === categoryFilter;
     return matchSearch && matchCategory;
   });
-  const handleSearchChange = (v: string) => { setSearch(v); setPage(1); };
-  const handleCategoryFilterChange = (v: string) => { setCategoryFilter(v); setPage(1); };
+  const handleSearchChange = (v: string) => { setSearch(v); setPage(1); setMapPage(1); };
+  const handleCategoryFilterChange = (v: string) => { setCategoryFilter(v); setPage(1); setMapPage(1); };
   const hasActiveFilter = query !== '' || categoryFilter !== '';
-  const clearFilters = () => { setSearch(''); setCategoryFilter(''); setPage(1); };
+  const clearFilters = () => { setSearch(''); setCategoryFilter(''); setPage(1); setMapPage(1); };
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const startIdx = (currentPage - 1) * PAGE_SIZE;
 
   const openAdd = () => { setForm(emptyForm); setEditId(null); setLogoFile(null); setLogoPreview(''); setModalOpen(true); };
+  const openAddAtLocation = (loc: LocationRef) => { setForm({ ...emptyForm, locationid: String(loc.id) }); setEditId(null); setLogoFile(null); setLogoPreview(''); setPopover(null); setModalOpen(true); };
   const openEdit = (t: TenantRow) => {
     setForm({ locationid: t.locationid ? String(t.locationid) : '', name: t.name, category: t.category, leaseUntil: toDateInput(t.leaseUntil) });
     setEditId(t.tenantid); setLogoFile(null); setLogoPreview(t.logoUrl ?? ''); setModalOpen(true);
@@ -209,6 +211,10 @@ function TenantDataView() {
   });
   const tenantByLocation = (locId: number) => tenants.find(t => t.locationid === locId);
   const isDraggable = (t: TenantRow) => !!t.location;
+  const MAP_PAGE_SIZE = 10;
+  const mapTotalPages = Math.max(1, Math.ceil(mapTenants.length / MAP_PAGE_SIZE));
+  const curMapPage = Math.min(mapPage, mapTotalPages);
+  const pagedMapTenants = mapTenants.slice((curMapPage - 1) * MAP_PAGE_SIZE, curMapPage * MAP_PAGE_SIZE);
 
   return (
     <div className="simulator-panel" style={{ marginTop: 0 }}>
@@ -294,29 +300,35 @@ function TenantDataView() {
 
           {viewMode === 'map' && (
             <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-              {/* left: small draggable tenant cards */}
-              <div style={{ width: 300, flexShrink: 0, border: '1px solid var(--border-color)', borderRadius: 12, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* left: draggable tenant card list (10 per page) */}
+              <div style={{ width: 340, flexShrink: 0, border: '1px solid var(--border-color)', borderRadius: 12, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '72vh' }}>
                 <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', fontSize: 12, fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Tarik kartu ke denah</span>
                   <span className="status-badge outline">{mapTenants.length} tenant</span>
                 </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {mapTenants.length === 0 ? <p className="welcome-text" style={{ fontSize: 12 }}>{hasActiveFilter ? 'Tidak ada tenant yang cocok dengan filter.' : 'Belum ada tenant.'}</p> : mapTenants.map(t => (
+                <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {mapTenants.length === 0 ? <p className="welcome-text" style={{ fontSize: 12 }}>{hasActiveFilter ? 'Tidak ada tenant yang cocok dengan filter.' : 'Belum ada tenant.'}</p> : pagedMapTenants.map(t => (
                     <div
                       key={t.tenantid}
                       draggable={isDraggable(t)}
                       onDragStart={handleDragStart(t)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${selectedForMap === t.tenantid ? '#2563eb' : 'var(--border-color)'}`, borderRadius: 8, padding: '7px 8px', background: selectedForMap === t.tenantid ? '#eff6ff' : '#fff', cursor: isDraggable(t) ? 'grab' : 'not-allowed', opacity: selectedForMap === t.tenantid ? 1 : 0.9, boxShadow: 'var(--shadow-sm)' }}
-                      onClick={() => { setSelectedForMap(t.tenantid); setSelectedId(t.tenantid); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1.5px solid ${selectedForMap === t.tenantid ? '#2563eb' : 'var(--border-color)'}`, borderRadius: 12, padding: '10px', background: selectedForMap === t.tenantid ? '#eff6ff' : '#fff', cursor: isDraggable(t) ? 'grab' : 'not-allowed', boxShadow: 'var(--shadow-sm)' }}
+                      onClick={() => { setSelectedForMap(t.tenantid); setSelectedId(t.tenantid); if (popover) setPopover(null); }}
                     >
-                      {t.logoUrl ? <img src={t.logoUrl} alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover' }} /> : <span style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--sky-50)', color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Store size={13} /></span>}
+                      {t.logoUrl ? <img src={t.logoUrl} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover' }} /> : <span style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--sky-50)', color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Store size={20} /></span>}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontFamily: 'var(--mono)' }}>{isDraggable(t) ? locationLabel(t) : 'tanpa unit'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{isDraggable(t) ? locationLabel(t) : 'tanpa unit'}</div>
+                        {t.category && <span className="status-badge outline" style={{ fontSize: 10, marginTop: 4, padding: '2px 6px' }}>{t.category}</span>}
                       </div>
-                      <GripVertical size={14} style={{ color: isDraggable(t) ? 'var(--text-secondary)' : '#cbd5e1', flexShrink: 0 }} />
+                      <GripVertical size={16} style={{ color: isDraggable(t) ? 'var(--text-secondary)' : '#cbd5e1', flexShrink: 0 }} />
                     </div>
                   ))}
+                </div>
+                <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <button type="button" className="btn-icon-action" disabled={curMapPage <= 1} onClick={() => setMapPage(p => Math.max(1, p - 1))} style={{ padding: '4px 10px', fontSize: 12 }}>‹ Prev</button>
+                  <span className="table-footer-info">{curMapPage}/{mapTotalPages}</span>
+                  <button type="button" className="btn-icon-action" disabled={curMapPage >= mapTotalPages} onClick={() => setMapPage(p => Math.min(mapTotalPages, p + 1))} style={{ padding: '4px 10px', fontSize: 12 }}>Next ›</button>
                 </div>
               </div>
 
@@ -339,13 +351,33 @@ function TenantDataView() {
                       const tenant = tenantByLocation(loc.id);
                       const occupied = !!tenant;
                       const isSel = selectedId === loc.id;
-                      const isHover = hoveredId === loc.id;
+                      const isHover = hoveredId === loc.id || (popover?.loc.id === loc.id);
+                      const accent = isSel || isHover ? '#d97706' : '#2563eb';
                       return (
                         <g key={loc.id} transform={`translate(${loc.x} ${loc.y})`} onClick={e => handleMarkerClick(loc, e)} onPointerEnter={() => setHoveredId(loc.id)} onPointerLeave={() => setHoveredId(null)} style={{ cursor: 'pointer', pointerEvents: 'all' }}>
-                          <rect className="marker-body" x={-34} y={-18} width={68} height={36} rx={7} fill={occupied ? (isSel || isHover ? '#ffb020' : '#2563eb') : '#ffffff'} stroke={occupied ? '#fff' : '#94a3b8'} strokeWidth={isSel || isHover ? 3 : (occupied ? 2 : 2)} strokeDasharray={occupied ? undefined : '5 3'} />
-                          <text y={-2} textAnchor="middle" fontSize={8} fontWeight={800} fill={occupied ? (isSel || isHover ? '#111' : '#fff') : '#64748b'}>{loc.name}</text>
-                          {occupied && tenant && <text y={9} textAnchor="middle" fontSize={6} fontWeight={700} fill={isSel || isHover ? '#111' : '#fff'}>{tenant.name.slice(0, 13)}</text>}
-                          {!occupied && <text y={9} textAnchor="middle" fontSize={6} fontWeight={700} fill="#94a3b8">kosong</text>}
+                          {/* card base */}
+                          <rect x={-100} y={-50} width={200} height={100} rx={14} fill={occupied ? (isSel || isHover ? '#ffb020' : '#ffffff') : '#ffffff'} stroke={occupied ? accent : '#94a3b8'} strokeWidth={isSel || isHover ? 4 : 2.5} strokeDasharray={occupied ? undefined : '6 4'} />
+                          {/* logo / initial */}
+                          {occupied && tenant ? (
+                            tenant.logoUrl ? (
+                              <image href={tenant.logoUrl} x={-88} y={-40} width={80} height={80} preserveAspectRatio="xMidYMid slice" style={{ pointerEvents: 'none' }} />
+                            ) : (
+                              <rect x={-88} y={-40} width={80} height={80} rx={12} fill="#eff6ff" />
+                            )
+                          ) : (
+                            <rect x={-88} y={-40} width={80} height={80} rx={12} fill="#f1f5f9" />
+                          )}
+                          {/* unit name */}
+                          <text x={4} y={-28} textAnchor="start" fontSize={15} fontWeight={800} fill={isSel || isHover ? '#7c2d12' : '#475569'}>{loc.name.slice(0, 14)}</text>
+                          {/* body text */}
+                          {occupied && tenant ? (
+                            <>
+                              <text x={4} y={-4} textAnchor="start" fontSize={20} fontWeight={800} fill={isSel || isHover ? '#111' : '#0f172a'}>{tenant.name.slice(0, 9)}</text>
+                              <text x={4} y={24} textAnchor="start" fontSize={12} fontWeight={700} fill="#94a3b8">{tenant.category?.slice(0, 18) ?? ''}</text>
+                            </>
+                          ) : (
+                            <text x={4} y={-4} textAnchor="start" fontSize={18} fontWeight={700} fill="#94a3b8">Kosong</text>
+                          )}
                         </g>
                       );
                     })}
@@ -353,7 +385,7 @@ function TenantDataView() {
                   </svg>
                 </div>
                 <div style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(17,17,17,0.92)', color: '#fff', fontSize: 11, padding: '6px 10px', borderRadius: 8, fontFamily: 'monospace' }}>
-                  Seret kartu tenant dari panel kiri ke titik lokasi unit di denah, lalu klik marker untuk melihat isinya.
+                  Klik kartu untuk lihat isi unit (bertenant / kosong). Unit kosong bisa disewa.
                 </div>
 
                 {/* popup card beside the clicked marker */}
@@ -383,15 +415,18 @@ function TenantDataView() {
                             <div className="data-card-meta-row"><span className="data-card-meta-lbl">Rent / Month</span><span className="data-card-meta-val">{popover.tenant.location ? (monthlyRent(popover.tenant) ? formatRupiah(monthlyRent(popover.tenant)) : '-') : '-'}</span></div>
                             <div className="data-card-meta-row"><span className="data-card-meta-lbl">Lease Until</span><span className="data-card-meta-val">{formatDate(popover.tenant.leaseUntil)}</span></div>
                           </div>
-                          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                            <button type="button" className="btn-icon-action edit" onClick={() => { setPopover(null); openEdit(popover.tenant as TenantRow); }}><Pencil size={13} /> Edit</button>
-                            <button type="button" className="btn-icon-action delete" onClick={() => { setPopover(null); handleDelete(popover.tenant as TenantRow); }}><Trash2 size={13} /> Hapus</button>
+                          <div style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'flex-end' }}>
+                            <button type="button" className="btn-icon-action edit" title="Edit" onClick={() => { setPopover(null); openEdit(popover.tenant as TenantRow); }}><Pencil size={14} /></button>
+                            <button type="button" className="btn-icon-action delete" title="Hapus" onClick={() => { setPopover(null); handleDelete(popover.tenant as TenantRow); }}><Trash2 size={14} /></button>
                           </div>
                         </>
                       ) : (
-                        <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                          Unit ini tidak punya tenant. Tarik kartu tenant dari panel kiri lalu lepas di titik ini untuk mengunci posisinya di denah.
-                        </p>
+                        <>
+                          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, marginBottom: 8 }}>
+                            Unit ini masih kosong dan siap disewa. Isi nama tenant untuk mengisi unit ini.
+                          </p>
+                          <button type="button" className="btn-secondary" style={{ width: '100%', padding: '7px 10px', fontSize: 12 }} onClick={() => openAddAtLocation(popover.loc)}><Plus size={12} /> Sewa Unit Ini</button>
+                        </>
                       )}
                     </div>
                   </div>
